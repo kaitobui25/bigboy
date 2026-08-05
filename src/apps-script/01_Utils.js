@@ -1,4 +1,4 @@
-/** Generic helpers with no external dependencies. */
+/** Cac helper dung chung, khong phu thuoc service cu the. */
 function bbNowIso_() {
   return new Date().toISOString();
 }
@@ -7,6 +7,7 @@ function bbUuid_() {
   return Utilities.getUuid();
 }
 
+/** Normalize EVM address; invalid address tra chuoi rong de caller quyet dinh bo qua/throw. */
 function bbNormalizeAddress_(value) {
   var address = String(value || '').trim().toLowerCase();
   if (!/^0x[a-f0-9]{40}$/.test(address)) return '';
@@ -17,12 +18,14 @@ function bbNormalizeChain_(value) {
   return String(value || '').trim().toLowerCase();
 }
 
+/** wallet_key gom chain + address de cung mot address tren chain khac khong bi trung key. */
 function bbWalletKey_(chain, address) {
   var normalizedChain = bbNormalizeChain_(chain);
   var normalizedAddress = bbNormalizeAddress_(address);
   return normalizedChain && normalizedAddress ? normalizedChain + ':' + normalizedAddress : '';
 }
 
+/** Parse number bao thu; khong dung `value || fallback` vi gia tri 0 la hop le. */
 function bbToNumber_(value, fallback) {
   if (value === '' || value === null || typeof value === 'undefined') return fallback;
   var n = Number(value);
@@ -49,6 +52,7 @@ function bbRound_(value, digits) {
   return Math.round((Number(value) + Number.EPSILON) * factor) / factor;
 }
 
+/** Date parse fail thi tra null, khong tao Invalid Date lan truyen sang score. */
 function bbParseDate_(value) {
   if (value instanceof Date && !isNaN(value.getTime())) return value;
   if (!value) return null;
@@ -76,6 +80,7 @@ function bbMedian_(values) {
   return numbers.length % 2 ? numbers[middle] : (numbers[middle - 1] + numbers[middle]) / 2;
 }
 
+/** Bo UTF-8 BOM truoc JSON.parse vi fixture tao bang PowerShell co the co BOM. */
 function bbSafeJsonParse_(text, context) {
   try {
     return JSON.parse(String(text || '').replace(/^\uFEFF/, ''));
@@ -84,6 +89,7 @@ function bbSafeJsonParse_(text, context) {
   }
 }
 
+/** Tao SHA-256 de truy dau input snapshot ma khong luu secret/API header. */
 function bbHashJson_(value) {
   var bytes = Utilities.computeDigest(
     Utilities.DigestAlgorithm.SHA_256,
@@ -106,6 +112,10 @@ function bbUniqueStrings_(values) {
     });
 }
 
+/**
+ * Lock toan script de tranh hai menu/trigger cung sua Sheet va credit ledger mot luc.
+ * tryLock 5 giay, khong xep hang vo han.
+ */
 function bbWithScriptLock_(callback) {
   var lock = LockService.getScriptLock();
   if (!lock.tryLock(5000)) throw new Error('SKIPPED_LOCKED: another BigBoy job is running');
@@ -116,6 +126,10 @@ function bbWithScriptLock_(callback) {
   }
 }
 
+/**
+ * Khi chay tu menu, dung active spreadsheet.
+ * Khi chay tu time trigger khong co active UI, mo bang GOOGLE_SHEET_ID da luu luc setup.
+ */
 function bbGetSpreadsheet_() {
   var active = SpreadsheetApp.getActiveSpreadsheet();
   if (active) return active;
@@ -130,6 +144,7 @@ function bbToast_(message, title) {
   } catch (ignored) {}
 }
 
+/** Cat error message de mot row log khong bi phinh qua lon. */
 function bbErrorMessage_(error) {
   if (!error) return 'Unknown error';
   return String(error.message || error).slice(0, 1000);
