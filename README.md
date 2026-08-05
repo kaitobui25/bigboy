@@ -1,91 +1,87 @@
-# BigBoy — Smart Money Token Finder
+# BigBoy V1.2 — Nansen Wallet Pipeline
 
-BigBoy là dự án tìm **token ứng viên đang được nhiều Smart Money entity độc lập cùng mua**.
+BigBoy V1.2 tu dong tim, uu tien va cham chat luong Smart Money wallet bang Nansen, sau do luu ket qua trong Google Sheets.
 
-## Mục tiêu V1
-
-V1 chỉ thực hiện từ bước thu thập ví đến bước phát hiện token:
-
-1. Tìm ví Smart Money đang hoạt động.
-2. Chấm điểm chất lượng ví theo PnL 90D/180D.
-3. Loại exchange, bridge, router, market maker và gom nhiều ví cùng chủ thành một entity.
-4. Theo dõi DEX trades của cohort.
-5. Gom các entity cùng mua và xuất `WATCH / CANDIDATE / STRONG`.
-
-V1 **không**:
-
-- xác nhận breakout/retest;
-- tạo buy signal;
-- đặt lệnh;
-- quản lý vị thế;
-- hứa hẹn lợi nhuận.
-
-Đầu ra cuối cùng là:
+Dau ra la cohort wallet phuc vu nghien cuu:
 
 ```text
-SMART_MONEY_TOKEN_CANDIDATE
+PROVISIONAL
+VERIFIED
+REJECTED / WAIT_DATA
 ```
 
-không phải:
+Day khong phai buy signal va chua dat lenh.
+
+## V1.2 da lam
+
+- Google Sheets schema va migration idempotent.
+- Smart Money DEX Trades discovery.
+- Wallet inbox chong duplicate.
+- Priority queue khong dung FIFO don gian.
+- PnL Summary 90D.
+- PnL Detail 180D co pagination guard.
+- Wallet score 0–100 voi component breakdown.
+- Wallet hard gate va ly do pass/fail.
+- Cohort `PROVISIONAL / VERIFIED`.
+- Dong bo cohort sang tracked wallet list ma khong xoa row manual.
+- Local Nansen credit guard, retry va run log.
+- Parser self-test khong goi API.
+- Comment tieng Viet cho cac doan logic chinh trong `src/apps-script`.
+
+## Discovery diagnostics
+
+Tu version `1.2.1`, discovery khong con bao `SUCCESS` mo ho khi API tra rong:
 
 ```text
-BUY_SIGNAL
+NO_DATA
+Nansen HTTP 200 nhung data=[]
+
+FAILED / PARSER_REJECTED_ALL
+Nansen co tra row nhung BigBoy loai toan bo
+
+SUCCESS
+Co it nhat mot valid wallet row
 ```
 
-## Kiến trúc V1
+Xem chi tiet o `05_RUN_LOG`:
 
 ```text
-Nansen Free API
-    ├── Smart Money discovery
-    └── PnL 90D/180D có chọn lọc
-             │
-             ▼
-Google Sheets + Apps Script
-    ├── Wallet inbox
-    ├── Provisional pool
-    ├── Verified cohort
-    ├── Entity mapping
-    ├── Raw trades
-    ├── Normalized token events
-    └── Token candidates
-             │
-             ▼
-Dune Free
-    ├── DEX trades
-    ├── Labels
-    └── Token transfers fallback
-             │
-             ▼
-Arkham Web UI
-    └── Xác minh thủ công các entity khó
+rows_received
+wallet_count
+error_message
+credits_used
 ```
 
-## Nguyên tắc thiết kế
+`credits_used` la local estimate neu Nansen khong tra credit-cost header. Nansen Usage Analytics moi la nguon kiem tra so credit that bi tru.
 
-- **Miễn phí trước, trả phí sau.** Nansen chỉ dùng ở nơi tạo giá trị cao nhất: discovery và scoring ví.
-- **Không đếm địa chỉ, đếm entity.** Nhiều ví cùng chủ chỉ được tính là một entity.
-- **Không chỉ join `tx_from`.** Attribution ưu tiên `taker`, sau đó mới dùng fallback có kiểm soát.
-- **Một nguồn chân lý cho status.** Pipeline luôn chạy theo thứ tự `GATE → SCORE → STATUS`.
-- **Lưu dữ liệu để audit.** Mỗi candidate phải truy ngược được về ví, transaction, attribution method và công thức điểm.
-- **Không để cohort hẹp làm hệ thống mù.** Dùng song song `PROVISIONAL_POOL` và `VERIFIED_COHORT`.
+## Defaults cho Base acceptance
 
-## Kế hoạch chi tiết
+```text
+CHAIN=base
+MIN_DISCOVERY_TRADE_USD=1000
+NANSEN_DISCOVERY_LIMIT=20
+NANSEN_DAILY_BUDGET=9
+MAX_WALLETS_SCORE_PER_RUN=1
+```
 
-Xem [docs/BUILD_PLAN_V1.md](docs/BUILD_PLAN_V1.md).
+Discovery dung threshold rong; chat luong wallet duoc loc o buoc PnL scoring, khong nen dung trade-value threshold qua cao de thay cho wallet gate.
 
-## Trạng thái
+## Deploy
 
-- [x] Chốt phạm vi V1
-- [x] Chốt kiến trúc Google Sheets + Apps Script + Dune
-- [x] Sửa thiết kế cohort bottleneck
-- [x] Sửa attribution `taker / tx_from / transfers`
-- [x] Hợp nhất Gate và Candidate Score
-- [ ] Khởi tạo Google Sheet template
-- [ ] Khởi tạo Apps Script project
-- [ ] Tạo Dune queries
-- [ ] Tích hợp Nansen
-- [ ] Kiểm thử end-to-end
+Xem [docs/V1_2_DEPLOY.md](docs/V1_2_DEPLOY.md).
 
-## Cảnh báo
+## Build plan
 
-Dữ liệu Smart Money và on-chain chỉ dùng để tạo danh sách nghiên cứu. Whale có thể hedge ở nơi khác, chuyển tài sản nội bộ hoặc thay đổi hành vi. Mọi kết quả phải được xem là dữ liệu hỗ trợ, không phải lời khuyên đầu tư.
+- [V1.2](docs/BUILD_PLAN_V1_2.md)
+- [V1.3](docs/BUILD_PLAN_V1_3.md)
+- [V1.4](docs/BUILD_PLAN_V1_4.md)
+- [V1.5](docs/BUILD_PLAN_V1_5.md)
+
+## Chua lam trong V1.2
+
+- Dune trade import cua V1.1.
+- Entity resolution va market-maker exclusion.
+- Aggregator, Safe/AA, contract-wallet attribution.
+- Multi-hop normalization.
+- Final token gate/score/status.
+- PostgreSQL, dashboard web hoac auto trading.

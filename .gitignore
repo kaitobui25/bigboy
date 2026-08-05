@@ -1,3 +1,7 @@
 .clasp.json
 .clasprc.json
 .env
+.env.local
+node_modules/
+coverage/
+.DS_Store
