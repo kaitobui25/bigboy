@@ -4,6 +4,8 @@
 
 This build implements the Nansen wallet pipeline directly, while creating the V1.1-compatible sheet foundation. Dune trade import is intentionally not implemented because no Dune API/query configuration is required for V1.2 wallet discovery and scoring.
 
+The important and difficult logic under `src/apps-script` includes Vietnamese comments explaining data flow, safety guards, scoring, cohort rebuild and Sheet synchronization.
+
 ## Deploy with clasp
 
 ```powershell
