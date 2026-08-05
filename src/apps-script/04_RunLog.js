@@ -21,6 +21,7 @@ function bbStartRun_(action, provider) {
 
 /**
  * Merge thong tin ket qua va append dung mot row vao 05_RUN_LOG.
+ * Status co the la SUCCESS, NO_DATA, PARTIAL, FAILED, SKIPPED_BUDGET...
  * Logging duoc boc try/catch de loi log khong che mat loi pipeline goc.
  */
 function bbFinishRun_(run, status, updates) {
