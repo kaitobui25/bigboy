@@ -1,4 +1,4 @@
-/** Config parsing and validation. */
+/** Doc 01_CONFIG, parse type va fail-fast neu thieu key bat buoc. */
 function bbGetConfig_() {
   var table = bbGetTable_(BB_SHEETS.CONFIG);
   var rows = bbRowsToObjects_(table);
@@ -7,12 +7,15 @@ function bbGetConfig_() {
     var key = String(row.key || '').trim();
     if (key) raw[key] = row.value;
   });
+
+  // Bat buoc du tat ca key trong BB_CONFIG_DEFAULTS de tranh chay voi default ngam.
   var required = BB_CONFIG_DEFAULTS.map(function (item) { return item[0]; });
   var missing = required.filter(function (key) {
     return !Object.prototype.hasOwnProperty.call(raw, key) || raw[key] === '' || raw[key] === null;
   });
   if (missing.length) throw new Error('Missing config keys: ' + missing.join(', '));
 
+  // Chuyen value tu cell Sheet (co the la string/number/boolean) sang type code mong doi.
   var config = {
     SCHEMA_VERSION: String(raw.SCHEMA_VERSION),
     SYSTEM_ENABLED: bbToBoolean_(raw.SYSTEM_ENABLED, false),
@@ -23,7 +26,7 @@ function bbGetConfig_() {
     NANSEN_DISCOVERY_LIMIT: Math.floor(bbToNumber_(raw.NANSEN_DISCOVERY_LIMIT, 20)),
     NANSEN_DETAIL_PER_PAGE: Math.floor(bbToNumber_(raw.NANSEN_DETAIL_PER_PAGE, 100)),
     NANSEN_MAX_PNL_PAGES: Math.floor(bbToNumber_(raw.NANSEN_MAX_PNL_PAGES, 5)),
-    MIN_DISCOVERY_TRADE_USD: bbToNumber_(raw.MIN_DISCOVERY_TRADE_USD, 10000),
+    MIN_DISCOVERY_TRADE_USD: bbToNumber_(raw.MIN_DISCOVERY_TRADE_USD, 1000),
     MAX_WALLETS_SCORE_PER_RUN: Math.floor(bbToNumber_(raw.MAX_WALLETS_SCORE_PER_RUN, 1)),
     MIN_WALLET_SCORE: bbToNumber_(raw.MIN_WALLET_SCORE, 65),
     PROVISIONAL_QUALITY_WEIGHT: bbToNumber_(raw.PROVISIONAL_QUALITY_WEIGHT, 0.4),
@@ -38,12 +41,14 @@ function bbGetConfig_() {
     MIN_CANDIDATE_NET_BUY_USD: bbToNumber_(raw.MIN_CANDIDATE_NET_BUY_USD, 10000),
     MIN_VERIFIED_BUYERS_CANDIDATE: Math.floor(bbToNumber_(raw.MIN_VERIFIED_BUYERS_CANDIDATE, 2))
   };
+
   if (!config.CHAIN) throw new Error('CHAIN is empty');
   if (config.NANSEN_DAILY_BUDGET < 1) throw new Error('NANSEN_DAILY_BUDGET must be >= 1');
   if (config.MAX_WALLETS_SCORE_PER_RUN < 1) throw new Error('MAX_WALLETS_SCORE_PER_RUN must be >= 1');
   return config;
 }
 
+/** Kiem tra kill switch, Nansen toggle va API key truoc job ton credit. */
 function bbAssertSystemReady_(config, requireNansen) {
   if (!config.SYSTEM_ENABLED) throw new Error('SYSTEM_ENABLED is FALSE');
   if (requireNansen) {
@@ -54,6 +59,10 @@ function bbAssertSystemReady_(config, requireNansen) {
   }
 }
 
+/**
+ * API key chi luu trong Apps Script Script Properties.
+ * Khong ghi vao cell, log, repo hoac response snapshot.
+ */
 function setNansenApiKey() {
   var ui = SpreadsheetApp.getUi();
   var response = ui.prompt('Set Nansen API Key', 'The key is stored only in Apps Script Script Properties.', ui.ButtonSet.OK_CANCEL);
