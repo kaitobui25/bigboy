@@ -1,4 +1,7 @@
-/** Smart Money discovery -> 06_WALLET_INBOX. */
+/**
+ * Smart Money discovery -> 06_WALLET_INBOX.
+ * Phan biet ro 3 truong hop: API rong, parser loai het, va co valid wallet.
+ */
 function runNansenDiscovery() {
   return bbWithScriptLock_(function () {
     var run = bbStartRun_('NANSEN_DISCOVERY', 'NANSEN');
@@ -11,6 +14,7 @@ function runNansenDiscovery() {
       var analysis = bbAnalyzeDiscoveryRows_(apiRows, config);
       var usageAfter = bbGetNansenUsageToday_();
 
+      // HTTP 200 + data=[]: khong phai parser bug. Ghi NO_DATA de nguoi dung khong goi lap lai trong mu.
       if (apiRows.length === 0) {
         var noDataMessage = [
           'HTTP 200 but Nansen returned data=[]',
@@ -43,6 +47,7 @@ function runNansenDiscovery() {
         };
       }
 
+      // API co row nhung parser loai het: day la bug/schema/config can dieu tra, khong duoc bao SUCCESS.
       if (analysis.validRows.length === 0) {
         var parserMessage = 'PARSER_REJECTED_ALL: Nansen returned ' + apiRows.length +
           ' rows but BigBoy accepted 0. Reasons: ' + JSON.stringify(analysis.invalidReasons);
@@ -86,6 +91,8 @@ function runNansenDiscovery() {
       });
     } catch (error) {
       var status = String(error.message || '').indexOf('SKIPPED_BUDGET') === 0 ? 'SKIPPED_BUDGET' : 'FAILED';
+
+      // PARSER_REJECTED_ALL da ghi log chi tiet o tren; tranh append them mot row FAILED trung lap.
       if (String(error.message || '').indexOf('PARSER_REJECTED_ALL') !== 0) {
         bbFinishRun_(run, status, {
           error_message: bbErrorMessage_(error),
@@ -97,6 +104,10 @@ function runNansenDiscovery() {
   });
 }
 
+/**
+ * Validate/normalize tung discovery row va dem ly do bi loai.
+ * Khong silent-filter de khi schema doi ta biet chinh xac mat row o dau.
+ */
 function bbAnalyzeDiscoveryRows_(data, config) {
   var validRows = [];
   var invalidReasons = {};
@@ -141,15 +152,21 @@ function bbAnalyzeDiscoveryRows_(data, config) {
   };
 }
 
+/** Backward-compatible helper cho code/test chi can danh sach valid rows. */
 function bbNormalizeDiscoveryRows_(data, config) {
   return bbAnalyzeDiscoveryRows_(data, config).validRows;
 }
 
+/**
+ * Gop nhieu trade cung wallet trong mot API response, sau do upsert mot row/wallet.
+ * discovery_count tang mot lan moi run; discovery_trade_count tang theo so trade.
+ */
 function bbUpsertDiscoveryInbox_(normalizedRows) {
   var table = bbGetTable_(BB_SHEETS.WALLET_INBOX);
   var existing = bbRowsToObjects_(table);
   var byKey = {};
   existing.forEach(function (row) { if (row.wallet_key) byKey[String(row.wallet_key)] = row; });
+
   var grouped = {};
   normalizedRows.forEach(function (event) {
     var group = grouped[event.wallet_key];
@@ -177,6 +194,7 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
       group.latest_tx = event.tx_hash;
     }
   });
+
   var inserted = 0;
   var updated = 0;
   Object.keys(grouped).forEach(function (walletKey) {
@@ -206,6 +224,7 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
     } else {
       updated += 1;
     }
+
     row.last_seen_at = event.last_seen_at;
     row.discovery_count = bbToNumber_(row.discovery_count, 0) + 1;
     row.discovery_trade_count = bbToNumber_(row.discovery_trade_count, 0) + event.trade_count;
@@ -213,6 +232,8 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
     row.nansen_labels = bbUniqueStrings_(String(row.nansen_labels || '').split('|').concat(event.labels)).join(' | ');
     row.latest_source_token = event.latest_token;
     row.latest_source_tx = event.latest_tx;
+
+    // Khong tu dong day VERIFIED/REJECTED quay lai WAIT_SCORE chi vi discovery lai.
     if ([BB_QUEUE_STATUS.REJECTED, BB_QUEUE_STATUS.VERIFIED].indexOf(String(row.queue_status)) < 0) {
       row.queue_status = BB_QUEUE_STATUS.WAIT_SCORE;
       row.next_action = 'SCORE';
@@ -222,6 +243,10 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
   return { inserted: inserted, updated: updated };
 }
 
+/**
+ * Priority chi quyet dinh wallet nao duoc dung credit truoc, khong phai quality score.
+ * Discovery frequency/volume/label tang diem; wallet vua cham gan day bi tru diem.
+ */
 function bbRecalculateInboxPriority_() {
   var inboxTable = bbGetTable_(BB_SHEETS.WALLET_INBOX);
   var inbox = bbRowsToObjects_(inboxTable);
