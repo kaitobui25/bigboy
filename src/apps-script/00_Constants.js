@@ -1,8 +1,12 @@
-/** BigBoy V1.2 shared constants. */
+/**
+ * Constants dung chung cua BigBoy V1.2.
+ * File nay la nguon chan ly cho ten Sheet, header, config default va estimated API cost.
+ */
 var BB_VERSION = '1.2.1';
 var BB_SCHEMA_VERSION = '1.2';
 var BB_NANSEN_BASE_URL = 'https://api.nansen.ai/api/v1';
 
+/** Ten Sheet co dinh; doi ten o day se anh huong toan bo pipeline. */
 var BB_SHEETS = {
   README: '00_README',
   CONFIG: '01_CONFIG',
@@ -15,6 +19,7 @@ var BB_SHEETS = {
   WALLET_COHORT: '08_WALLET_COHORT'
 };
 
+/** Header duoc dung cho migration va object<->row mapping. */
 var BB_HEADERS = {};
 BB_HEADERS[BB_SHEETS.CONFIG] = ['key', 'value', 'description'];
 BB_HEADERS[BB_SHEETS.WALLETS] = [
@@ -62,6 +67,10 @@ BB_HEADERS[BB_SHEETS.WALLET_COHORT] = [
   'next_review_at', 'source', 'cohort_reason'
 ];
 
+/**
+ * Config default chi duoc seed khi key chua ton tai.
+ * Setup chay lai khong overwrite gia tri nguoi dung da chinh trong 01_CONFIG.
+ */
 var BB_CONFIG_DEFAULTS = [
   ['SCHEMA_VERSION', BB_SCHEMA_VERSION, 'Do not edit manually'],
   ['SYSTEM_ENABLED', true, 'Master kill switch'],
@@ -88,12 +97,17 @@ var BB_CONFIG_DEFAULTS = [
   ['MIN_VERIFIED_BUYERS_CANDIDATE', 2, 'Temporary V1.2 quality requirement']
 ];
 
+/**
+ * Estimated cost dung cho local guard.
+ * Neu response co observed credit header, 05_CreditGuard se dieu chinh lai ledger.
+ */
 var BB_NANSEN_COSTS = {
   DISCOVERY: 5,
   PNL_SUMMARY: 1,
   PNL_DETAIL_PAGE: 1
 };
 
+/** Trang thai queue cua wallet tu discovery den scoring/review. */
 var BB_QUEUE_STATUS = {
   NEW: 'NEW',
   PROVISIONAL: 'PROVISIONAL',
