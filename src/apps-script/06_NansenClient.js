@@ -1,7 +1,13 @@
-/** Minimal Nansen API client based on committed V1.2 response fixtures. */
+/**
+ * Nansen API client toi thieu, mapping theo response fixture that trong repo.
+ * Moi request di qua mot flow chung:
+ * reserve credit -> HTTP POST -> retry co gioi han -> parse JSON -> validate -> tra body.
+ */
 function bbNansenPost_(path, payload, estimatedCost, purpose) {
   var apiKey = PropertiesService.getScriptProperties().getProperty('NANSEN_API_KEY');
   if (!apiKey) throw new Error('NANSEN_API_KEY is missing');
+
+  // Reserve estimate truoc khi goi de job khac khong vuot daily cap cung luc.
   bbReserveNansenCredits_(estimatedCost);
   var options = {
     method: 'post',
@@ -10,12 +16,17 @@ function bbNansenPost_(path, payload, estimatedCost, purpose) {
     payload: JSON.stringify(payload),
     muteHttpExceptions: true
   };
+
   var response = bbFetchNansenWithRetry_(BB_NANSEN_BASE_URL + path, options, purpose);
   var status = response.getResponseCode();
   var headers = response.getAllHeaders ? response.getAllHeaders() : response.getHeaders();
+
+  // Neu Nansen tra credit cost trong header, thay estimate bang gia tri thuc quan sat duoc.
   bbAdjustNansenCredits_(estimatedCost, bbExtractObservedCreditCost_(headers));
   var text = response.getContentText();
   var body = bbParseNansenBody_(text, status, purpose);
+
+  // muteHttpExceptions=true nen HTTP 4xx/5xx khong tu throw; phai tu chuyen thanh Error co context.
   if (status < 200 || status >= 300) {
     var message = body.message || body.error || body.raw || ('HTTP ' + status);
     var error = new Error('Nansen ' + purpose + ' failed (' + status + '): ' + message);
@@ -26,6 +37,12 @@ function bbNansenPost_(path, payload, estimatedCost, purpose) {
   return { body: body, headers: headers, status: status, estimatedCost: estimatedCost };
 }
 
+/**
+ * Retry toi da mot lan:
+ * - network error: sleep 1 giay roi thu lai;
+ * - HTTP 429/5xx: ton trong Retry-After, clamp 1..10 giay;
+ * - HTTP 4xx khac: tra ngay de caller xu ly, khong retry vo ich.
+ */
 function bbFetchNansenWithRetry_(url, options, purpose) {
   var response;
   for (var attempt = 0; attempt < 2; attempt += 1) {
@@ -50,6 +67,7 @@ function bbFetchNansenWithRetry_(url, options, purpose) {
   return response;
 }
 
+/** Parse JSON, dong thoi bo UTF-8 BOM do PowerShell Out-File co the tao. */
 function bbParseNansenBody_(text, status, purpose) {
   if (!text) return {};
   try {
@@ -62,6 +80,10 @@ function bbParseNansenBody_(text, status, purpose) {
   }
 }
 
+/**
+ * Discovery chi loc theo chain va trade value de lay sample wallet rong.
+ * Khong dung threshold nay thay cho wallet quality gate; quality duoc cham o buoc PnL.
+ */
 function bbFetchDiscovery_(config) {
   var payload = {
     chains: [config.CHAIN],
@@ -73,6 +95,7 @@ function bbFetchDiscovery_(config) {
   return result;
 }
 
+/** Lay metric tong hop cho mot wallet trong cua so N ngay. */
 function bbFetchPnlSummary_(wallet, chain, days) {
   var to = new Date();
   var from = new Date(to.getTime() - Number(days) * 86400000);
@@ -86,6 +109,11 @@ function bbFetchPnlSummary_(wallet, chain, days) {
   return result;
 }
 
+/**
+ * Lay PnL detail tung token qua nhieu page.
+ * Neu cham hard page limit ma API van con page, KHONG cham diem bang du lieu thieu;
+ * throw WAIT_DATA de tranh largest-winner-share va breadth bi sai.
+ */
 function bbFetchPnlDetailAll_(wallet, chain, days, config) {
   var to = new Date();
   var from = new Date(to.getTime() - Number(days) * 86400000);
@@ -112,6 +140,7 @@ function bbFetchPnlDetailAll_(wallet, chain, days, config) {
   return { data: allRows, pagesFetched: pagesFetched };
 }
 
+/** Contract checks: fail fast khi Nansen doi schema thay vi ghi du lieu sai vao Sheet. */
 function bbValidateDiscoveryResponse_(body) {
   if (!body || !Array.isArray(body.data)) throw new Error('Discovery contract error: data[] missing');
   body.data.forEach(function (row, index) {
