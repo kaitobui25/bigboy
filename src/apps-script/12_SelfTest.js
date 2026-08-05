@@ -1,7 +1,11 @@
-/** Lightweight Apps Script self-tests; no API calls. */
+/**
+ * Self-test nhe chay ngay trong Apps Script.
+ * Khong goi Nansen, khong tieu credit; chi test helper score/gate/parser.
+ */
 function runV12SelfTests() {
   var failures = [];
   function assert(name, condition) { if (!condition) failures.push(name); }
+
   var config = {
     CHAIN: 'base',
     MIN_PROFITABLE_TOKENS_180D: 5,
@@ -9,6 +13,8 @@ function runV12SelfTests() {
     MAX_LARGEST_WINNER_SHARE: 0.5,
     MIN_WALLET_SCORE: 65
   };
+
+  // Case wallet tot de kiem tra score clamp va gate pass.
   var strong = {
     pnl_90d_realized: 100,
     pnl_180d_realized: 200,
@@ -24,10 +30,13 @@ function runV12SelfTests() {
   strong.wallet_score = score.total;
   assert('score clamps to <=100', score.total <= 100 && score.total >= 99);
   assert('strong wallet gate pass', bbEvaluateWalletGate_(strong, config).pass === true);
+
+  // Cung score cao nhung phu thuoc mot winner van phai fail hard gate.
   var concentrated = Object.assign({}, strong, { largest_winner_share: 0.9, wallet_score: 90 });
   assert('concentrated wallet rejected', bbEvaluateWalletGate_(concentrated, config).pass === false);
   assert('wallet normalization', bbNormalizeAddress_(' 0x431AeC20e2C09A1eE556F656fCbEb0CC36F7DfDC ') === '0x431aec20e2c09a1ee556f656fcbeb0cc36f7dfdc');
 
+  // Shape nay lay tu discovery fixture that da commit; dung de bat bug field mapping.
   var discoverySample = [{
     chain: 'base',
     block_timestamp: '2026-08-05T06:56:37Z',
