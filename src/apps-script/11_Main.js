@@ -1,4 +1,4 @@
-/** Spreadsheet menu and orchestration. */
+/** Tao menu dieu khien trong Google Sheets. */
 function onOpen() {
   SpreadsheetApp.getUi().createMenu('BigBoy')
     .addItem('Setup / Upgrade V1.2', 'setupBigBoyV12')
@@ -19,15 +19,23 @@ function onOpen() {
     .addToUi();
 }
 
+/**
+ * Chay full wallet pipeline theo dung dependency:
+ * discovery -> scoring -> cohort -> tracked wallets -> token quality.
+ *
+ * SKIPPED_BUDGET la trang thai du kien, nen pipeline tiep tuc cac buoc khong ton API.
+ * Moi loi khac duoc throw ngay de tranh rebuild/sync tu du lieu nua chay nua hong.
+ */
 function runWalletPipeline() {
   var steps = [];
   try {
-    runNansenDiscovery();
-    steps.push('discovery');
+    var discovery = runNansenDiscovery();
+    steps.push(discovery && discovery.noData ? 'discovery no data' : 'discovery');
   } catch (error) {
     if (String(error.message || '').indexOf('SKIPPED_BUDGET') < 0) throw error;
     steps.push('discovery skipped by budget');
   }
+
   try {
     scorePriorityWallets();
     steps.push('scoring');
@@ -35,6 +43,8 @@ function runWalletPipeline() {
     if (String(error2.message || '').indexOf('SKIPPED_BUDGET') < 0) throw error2;
     steps.push('scoring skipped by budget');
   }
+
+  // Cac buoc ben duoi chi doc/ghi Sheet, khong goi Nansen.
   rebuildWalletCohort();
   syncCohortToTrackedWallets();
   refreshTokenWalletQuality();
