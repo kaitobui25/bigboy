@@ -1,0 +1,12 @@
+{
+  "name": "bigboy-wallet-finder",
+  "version": "1.2.0",
+  "private": true,
+  "scripts": {
+    "test": "node --test tests/*.test.js",
+    "check": "node --check src/apps-script/08_WalletScoring.js"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

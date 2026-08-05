@@ -1,91 +1,53 @@
 # BigBoy — Smart Money Token Finder
 
-BigBoy là dự án tìm **token ứng viên đang được nhiều Smart Money entity độc lập cùng mua**.
+BigBoy tìm các token đang được nhiều ví Smart Money mua và giữ đủ dữ liệu để kiểm tra ngược. Kết quả là **research list**, không phải tín hiệu mua tự động.
 
-## Mục tiêu V1
+## Trạng thái hiện tại
 
-V1 chỉ thực hiện từ bước thu thập ví đến bước phát hiện token:
+### V1.2 — Nansen Wallet Discovery & Scoring
 
-1. Tìm ví Smart Money đang hoạt động.
-2. Chấm điểm chất lượng ví theo PnL 90D/180D.
-3. Loại exchange, bridge, router, market maker và gom nhiều ví cùng chủ thành một entity.
-4. Theo dõi DEX trades của cohort.
-5. Gom các entity cùng mua và xuất `WATCH / CANDIDATE / STRONG`.
+Đã có Apps Script cho:
 
-V1 **không**:
+- tạo/migrate 9 Google Sheets;
+- lưu Nansen API key trong Script Properties;
+- Smart Money discovery → `06_WALLET_INBOX`;
+- priority queue không dùng FIFO;
+- PnL summary 90D và PnL detail 180D có pagination guard;
+- wallet score 0–100 với component breakdown;
+- hard gate và lý do pass/fail;
+- cohort `PROVISIONAL / VERIFIED`;
+- đồng bộ cohort sang `02_WALLETS` mà không ghi đè manual rows;
+- local daily credit guard và run log;
+- bổ sung verified/provisional buyer vào token results nếu dữ liệu V1.1 đã tồn tại.
 
-- xác nhận breakout/retest;
-- tạo buy signal;
-- đặt lệnh;
-- quản lý vị thế;
-- hứa hẹn lợi nhuận.
+Chi tiết triển khai: [docs/V1_2_DEPLOY.md](docs/V1_2_DEPLOY.md).
 
-Đầu ra cuối cùng là:
+## Deploy bằng clasp
 
-```text
-SMART_MONEY_TOKEN_CANDIDATE
+```powershell
+Copy-Item .clasp.example.json .clasp.json
+# Thay scriptId bằng Apps Script ID thật.
+clasp login
+clasp push
 ```
 
-không phải:
+Không commit `.clasp.json`, `.clasprc.json`, `.env` hoặc API key.
 
-```text
-BUY_SIGNAL
+## Test
+
+```powershell
+npm test
 ```
 
-## Kiến trúc V1
+## Roadmap
 
-```text
-Nansen Free API
-    ├── Smart Money discovery
-    └── PnL 90D/180D có chọn lọc
-             │
-             ▼
-Google Sheets + Apps Script
-    ├── Wallet inbox
-    ├── Provisional pool
-    ├── Verified cohort
-    ├── Entity mapping
-    ├── Raw trades
-    ├── Normalized token events
-    └── Token candidates
-             │
-             ▼
-Dune Free
-    ├── DEX trades
-    ├── Labels
-    └── Token transfers fallback
-             │
-             ▼
-Arkham Web UI
-    └── Xác minh thủ công các entity khó
-```
+- [x] V1.2 — Nansen discovery và wallet scoring
+- [ ] V1.3 — Entity mapping, loại ví hệ thống/MM
+- [ ] V1.4 — Aggregator, contract wallet, multi-hop
+- [ ] V1.5 — Gate, score, audit, validation cho token candidate
 
-## Nguyên tắc thiết kế
-
-- **Miễn phí trước, trả phí sau.** Nansen chỉ dùng ở nơi tạo giá trị cao nhất: discovery và scoring ví.
-- **Không đếm địa chỉ, đếm entity.** Nhiều ví cùng chủ chỉ được tính là một entity.
-- **Không chỉ join `tx_from`.** Attribution ưu tiên `taker`, sau đó mới dùng fallback có kiểm soát.
-- **Một nguồn chân lý cho status.** Pipeline luôn chạy theo thứ tự `GATE → SCORE → STATUS`.
-- **Lưu dữ liệu để audit.** Mỗi candidate phải truy ngược được về ví, transaction, attribution method và công thức điểm.
-- **Không để cohort hẹp làm hệ thống mù.** Dùng song song `PROVISIONAL_POOL` và `VERIFIED_COHORT`.
-
-## Kế hoạch chi tiết
-
-Xem [docs/BUILD_PLAN_V1.md](docs/BUILD_PLAN_V1.md).
-
-## Trạng thái
-
-- [x] Chốt phạm vi V1
-- [x] Chốt kiến trúc Google Sheets + Apps Script + Dune
-- [x] Sửa thiết kế cohort bottleneck
-- [x] Sửa attribution `taker / tx_from / transfers`
-- [x] Hợp nhất Gate và Candidate Score
-- [ ] Khởi tạo Google Sheet template
-- [ ] Khởi tạo Apps Script project
-- [ ] Tạo Dune queries
-- [ ] Tích hợp Nansen
-- [ ] Kiểm thử end-to-end
+Các build plan nằm trong thư mục [`docs/`](docs/).
 
 ## Cảnh báo
 
-Dữ liệu Smart Money và on-chain chỉ dùng để tạo danh sách nghiên cứu. Whale có thể hedge ở nơi khác, chuyển tài sản nội bộ hoặc thay đổi hành vi. Mọi kết quả phải được xem là dữ liệu hỗ trợ, không phải lời khuyên đầu tư.
+Smart Money/on-chain data có thể thiếu, trễ hoặc không phản ánh hedge ở nơi khác. Không dùng output như lời khuyên đầu tư hay đảm bảo lợi nhuận.

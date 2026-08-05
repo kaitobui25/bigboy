@@ -1,1 +1,3 @@
-nansen_api : xxxxxxxxxxxxxxxxxxxxxxx
+# Apps Script uses Script Properties instead of this file.
+# Never commit a real Nansen API key.
+NANSEN_API_KEY=replace_me
