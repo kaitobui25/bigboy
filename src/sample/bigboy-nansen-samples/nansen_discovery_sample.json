@@ -1,0 +1,29 @@
+﻿{
+    "data":  [
+                 {
+                     "chain":  "base",
+                     "block_timestamp":  "2026-08-05T06:56:37Z",
+                     "transaction_hash":  "0x325738ec77dfe2f0d849d8755cf2432a98bbb5dfb996ae8d3905283c71552bcc",
+                     "trader_address":  "0x431aec20e2c09a1ee556f656fcbeb0cc36f7dfdc",
+                     "trader_address_label":  "High Balance",
+                     "token_bought_address":  "0xadfcd749636648e3b3963dc5e9af4c3fd45bc697",
+                     "token_sold_address":  "0xadf95fcc403e968187fba47a4a46109a7b2c5da1",
+                     "token_bought_amount":  509526.726867,
+                     "token_sold_amount":  400000.0,
+                     "token_bought_symbol":  "ESBUILD",
+                     "token_sold_symbol":  "LUX",
+                     "token_bought_age_days":  134,
+                     "token_sold_age_days":  146,
+                     "token_bought_market_cap":  null,
+                     "token_sold_market_cap":  null,
+                     "token_bought_fdv":  15110258.2501031,
+                     "token_sold_fdv":  25369633.1000999,
+                     "trade_value_usd":  10147.85324003996
+                 }
+             ],
+    "pagination":  {
+                       "page":  1,
+                       "per_page":  20,
+                       "is_last_page":  true
+                   }
+}
