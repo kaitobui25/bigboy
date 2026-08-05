@@ -4,6 +4,7 @@ function setupBigBoyV12() {
     var run = bbStartRun_('SETUP_V1_2', 'SYSTEM');
     try {
       var ss = bbGetSpreadsheet_();
+      PropertiesService.getScriptProperties().setProperty('GOOGLE_SHEET_ID', ss.getId());
       bbEnsureReadme_(ss);
       Object.keys(BB_HEADERS).forEach(function (sheetName) {
         bbEnsureSheet_(ss, sheetName, BB_HEADERS[sheetName]);

@@ -56,16 +56,45 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
   var existing = bbRowsToObjects_(table);
   var byKey = {};
   existing.forEach(function (row) { if (row.wallet_key) byKey[String(row.wallet_key)] = row; });
-  var newKeys = {};
+  var grouped = {};
   normalizedRows.forEach(function (event) {
-    var row = byKey[event.wallet_key];
-    if (!row) {
-      row = {
+    var group = grouped[event.wallet_key];
+    if (!group) {
+      group = {
         wallet_key: event.wallet_key,
         chain: event.chain,
         wallet_address: event.wallet_address,
         first_seen_at: event.seen_at,
         last_seen_at: event.seen_at,
+        trade_count: 0,
+        volume_usd: 0,
+        labels: [],
+        latest_token: '',
+        latest_tx: ''
+      };
+      grouped[event.wallet_key] = group;
+    }
+    group.trade_count += 1;
+    group.volume_usd += event.trade_value_usd;
+    group.labels.push(event.label);
+    if (!bbParseDate_(group.last_seen_at) || (bbParseDate_(event.seen_at) && bbParseDate_(event.seen_at) > bbParseDate_(group.last_seen_at))) {
+      group.last_seen_at = event.seen_at;
+      group.latest_token = event.token_symbol;
+      group.latest_tx = event.tx_hash;
+    }
+  });
+  var inserted = 0;
+  var updated = 0;
+  Object.keys(grouped).forEach(function (walletKey) {
+    var event = grouped[walletKey];
+    var row = byKey[walletKey];
+    if (!row) {
+      row = {
+        wallet_key: event.wallet_key,
+        chain: event.chain,
+        wallet_address: event.wallet_address,
+        first_seen_at: event.first_seen_at,
+        last_seen_at: event.last_seen_at,
         discovery_count: 0,
         discovery_trade_count: 0,
         discovery_volume_usd: 0,
@@ -78,26 +107,25 @@ function bbUpsertDiscoveryInbox_(normalizedRows) {
         last_error: ''
       };
       existing.push(row);
-      byKey[event.wallet_key] = row;
-      newKeys[event.wallet_key] = true;
+      byKey[walletKey] = row;
+      inserted += 1;
+    } else {
+      updated += 1;
     }
-    row.last_seen_at = event.seen_at;
+    row.last_seen_at = event.last_seen_at;
     row.discovery_count = bbToNumber_(row.discovery_count, 0) + 1;
-    row.discovery_trade_count = bbToNumber_(row.discovery_trade_count, 0) + 1;
-    row.discovery_volume_usd = bbToNumber_(row.discovery_volume_usd, 0) + event.trade_value_usd;
-    row.nansen_labels = bbUniqueStrings_(String(row.nansen_labels || '').split('|').concat([event.label])).join(' | ');
-    row.latest_source_token = event.token_symbol;
-    row.latest_source_tx = event.tx_hash;
+    row.discovery_trade_count = bbToNumber_(row.discovery_trade_count, 0) + event.trade_count;
+    row.discovery_volume_usd = bbToNumber_(row.discovery_volume_usd, 0) + event.volume_usd;
+    row.nansen_labels = bbUniqueStrings_(String(row.nansen_labels || '').split('|').concat(event.labels)).join(' | ');
+    row.latest_source_token = event.latest_token;
+    row.latest_source_tx = event.latest_tx;
     if ([BB_QUEUE_STATUS.REJECTED, BB_QUEUE_STATUS.VERIFIED].indexOf(String(row.queue_status)) < 0) {
       row.queue_status = BB_QUEUE_STATUS.WAIT_SCORE;
       row.next_action = 'SCORE';
     }
   });
   bbReplaceTableRows_(BB_SHEETS.WALLET_INBOX, existing);
-  return {
-    inserted: Object.keys(newKeys).length,
-    updated: Math.max(0, normalizedRows.length - Object.keys(newKeys).length)
-  };
+  return { inserted: inserted, updated: updated };
 }
 
 function bbRecalculateInboxPriority_() {
