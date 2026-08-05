@@ -1,5 +1,5 @@
 /** BigBoy V1.2 shared constants. */
-var BB_VERSION = '1.2.0';
+var BB_VERSION = '1.2.1';
 var BB_SCHEMA_VERSION = '1.2';
 var BB_NANSEN_BASE_URL = 'https://api.nansen.ai/api/v1';
 
@@ -68,11 +68,11 @@ var BB_CONFIG_DEFAULTS = [
   ['TIMEZONE', 'Asia/Tokyo', 'Display and daily credit timezone'],
   ['CHAIN', 'base', 'V1.2 supports one chain per run'],
   ['NANSEN_ENABLED', false, 'Set TRUE only after storing NANSEN_API_KEY'],
-  ['NANSEN_DAILY_BUDGET', 9, 'Conservative Free-plan local cap'],
+  ['NANSEN_DAILY_BUDGET', 9, 'Local estimate only; verify actual Nansen Usage Analytics'],
   ['NANSEN_DISCOVERY_LIMIT', 20, 'Rows per discovery call'],
   ['NANSEN_DETAIL_PER_PAGE', 100, 'PnL detail rows per page'],
   ['NANSEN_MAX_PNL_PAGES', 5, 'Hard pagination guard per wallet'],
-  ['MIN_DISCOVERY_TRADE_USD', 10000, 'Minimum discovery trade value'],
+  ['MIN_DISCOVERY_TRADE_USD', 1000, 'Broad discovery threshold; wallet quality is filtered later by scoring'],
   ['MAX_WALLETS_SCORE_PER_RUN', 1, 'Free-plan default; raise only with budget'],
   ['MIN_WALLET_SCORE', 65, 'Verified wallet threshold'],
   ['PROVISIONAL_QUALITY_WEIGHT', 0.40, 'Display weight until verified'],
