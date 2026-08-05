@@ -1,9 +1,14 @@
-/** Spreadsheet schema, migrations and table helpers. */
+/**
+ * Quan ly schema Google Sheets, migration idempotent va cac helper doc/ghi table.
+ * Nguyen tac: setup chay lai khong xoa data cu va chi them column con thieu.
+ */
 function setupBigBoyV12() {
   return bbWithScriptLock_(function () {
     var run = bbStartRun_('SETUP_V1_2', 'SYSTEM');
     try {
       var ss = bbGetSpreadsheet_();
+
+      // Luu Sheet ID de time trigger van mo duoc dung file khi khong co active spreadsheet.
       PropertiesService.getScriptProperties().setProperty('GOOGLE_SHEET_ID', ss.getId());
       bbEnsureReadme_(ss);
       Object.keys(BB_HEADERS).forEach(function (sheetName) {
@@ -21,6 +26,7 @@ function setupBigBoyV12() {
   });
 }
 
+/** README la trang huong dan, duoc rebuild de luon phan anh version hien tai. */
 function bbEnsureReadme_(ss) {
   var sheet = ss.getSheetByName(BB_SHEETS.README) || ss.insertSheet(BB_SHEETS.README);
   var rows = [
@@ -44,6 +50,12 @@ function bbEnsureReadme_(ss) {
   sheet.setColumnWidth(2, 700);
 }
 
+/**
+ * Migration idempotent cho mot sheet:
+ * - khong doi thu tu/xoa header cu;
+ * - chi append header moi con thieu;
+ * - giu nguyen data row hien tai.
+ */
 function bbEnsureSheet_(ss, name, expectedHeaders) {
   var sheet = ss.getSheetByName(name) || ss.insertSheet(name);
   var lastColumn = sheet.getLastColumn();
@@ -83,6 +95,11 @@ function bbApplySheetFormatting_(ss) {
   if (configSheet) configSheet.setColumnWidth(3, 500);
 }
 
+/**
+ * Doc mot sheet thanh cau truc table thong nhat:
+ * headers + headerMap + rows khong rong.
+ * Cac service khac khong truy cap cell index truc tiep de tranh vo khi them column.
+ */
 function bbGetTable_(sheetName) {
   var sheet = bbGetSpreadsheet_().getSheetByName(sheetName);
   if (!sheet) throw new Error('Missing sheet: ' + sheetName + '. Run Setup / Upgrade V1.2.');
@@ -97,6 +114,7 @@ function bbGetTable_(sheetName) {
   return { sheet: sheet, headers: headers, rows: rows, headerMap: headerMap };
 }
 
+/** Chuyen array row sang object theo ten header, de logic khong phu thuoc vi tri column. */
 function bbRowsToObjects_(table) {
   return table.rows.map(function (row) {
     var object = {};
@@ -105,12 +123,17 @@ function bbRowsToObjects_(table) {
   });
 }
 
+/** Chuyen object ve array dung thu tu header hien tai cua Sheet. */
 function bbObjectToRow_(object, headers) {
   return headers.map(function (header) {
     return Object.prototype.hasOwnProperty.call(object, header) ? object[header] : '';
   });
 }
 
+/**
+ * Rebuild toan bo data row, giu header.
+ * Dung cho materialized sheets nhu COHORT/METRICS; khong dung cho raw append-only sau nay.
+ */
 function bbReplaceTableRows_(sheetName, objects) {
   var table = bbGetTable_(sheetName);
   var sheet = table.sheet;
@@ -123,6 +146,10 @@ function bbReplaceTableRows_(sheetName, objects) {
   }
 }
 
+/**
+ * Upsert theo keyField trong memory, sau do batch-write mot lan.
+ * Object incoming chi overwrite field no co; cac field cu khac duoc giu lai.
+ */
 function bbUpsertObjects_(sheetName, keyField, objects) {
   if (!objects || !objects.length) return { inserted: 0, updated: 0 };
   var table = bbGetTable_(sheetName);
@@ -151,6 +178,7 @@ function bbUpsertObjects_(sheetName, keyField, objects) {
   return { inserted: inserted, updated: updated };
 }
 
+/** Chi them config key con thieu; khong overwrite gia tri nguoi dung da chinh. */
 function bbSeedConfigDefaults_() {
   var table = bbGetTable_(BB_SHEETS.CONFIG);
   var existing = bbRowsToObjects_(table);
@@ -168,6 +196,7 @@ function bbSeedConfigDefaults_() {
   bbReplaceTableRows_(BB_SHEETS.CONFIG, existing);
 }
 
+/** Kiem tra schema, config va API key truoc khi chay pipeline ton credit. */
 function validateBigBoyV12() {
   var issues = [];
   var ss = bbGetSpreadsheet_();
