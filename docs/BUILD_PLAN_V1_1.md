@@ -137,7 +137,7 @@ Không dùng `tx_from` để tăng coverage trong V1.1. Chấp nhận bỏ sót 
 
 ## 6. Google Sheets schema
 
-Chỉ tạo năm sheet.
+Chỉ tạo sáu sheet.
 
 ### 6.1 `00_README`
 
@@ -476,7 +476,7 @@ Không commit `.clasp.json`, API key hoặc Sheet ID thật.
 
 - [ ] Tạo Apps Script project skeleton.
 - [ ] Tạo menu.
-- [ ] `Setup Sheets` tạo đúng 5 sheets và headers.
+- [ ] `Setup Sheets` tạo đúng 6 sheets và headers.
 - [ ] Freeze header, basic filter và number/date format.
 - [ ] Không tạo dashboard/chart.
 
@@ -541,7 +541,7 @@ Không commit `.clasp.json`, API key hoặc Sheet ID thật.
 
 V1.1 hoàn thành khi tất cả điều kiện sau đúng:
 
-- [ ] `Setup Sheets` tạo đúng schema mà không cần sửa tay.
+- [ ] `Setup Sheets` tạo đúng 6 sheet và schema mà không cần sửa tay.
 - [ ] Có thể nhập 10–30 wallets và validate được.
 - [ ] `Run Full Refresh` lấy direct DEX trades thật từ Dune.
 - [ ] `03_TRADES_RAW` không duplicate sau khi chạy lại.
